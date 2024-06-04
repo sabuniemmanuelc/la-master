@@ -1,0 +1,30 @@
+[Unit]
+Description=CeleryBeat Service
+
+After=network.target rabbitmq.target
+
+[Service]
+Type=simple
+User=root
+Group=www-data
+EnvironmentFile=-/etc/systemd/celery.conf
+WorkingDirectory=/opt/la/
+PermissionsStartOnly=true
+ExecStartPre=-/bin/mkdir -p ${CELERYBEAT_STATE_DIR}
+ExecStartPre=/bin/chown -R ${CELERYD_USER}:${CELERYD_GROUP} ${CELERYBEAT_STATE_DIR}
+# ExecStartPre=/bin/rm ${CELERYBEAT_SCHEDULE}
+#ExecStart=/bin/bash -c '${CELERY_BIN} \
+#    -A ${CELERY_APP} \
+#    beat \
+#    --workdir=${CELERYBEAT_WORKDIR} \
+#    --pidfile=${CELERYBEAT_PID_FILE} \
+#    --logfile=${CELERYBEAT_LOG_FILE} \
+#    --loglevel=${CELERYBEAT_LOG_LEVEL} \
+#    --schedule=${CELERYBEAT_SCHEDULE}'
+ExecStart=/bin/sh -c '${CELERY_BIN} -A ${CELERY_APP} beat  \
+    --pidfile=${CELERYBEAT_PID_FILE} \
+    --logfile=${CELERYBEAT_LOG_FILE} --loglevel=${CELERYD_LOG_LEVEL} --schedule=${CELERYBEAT_SCHEDULE}'
+ExecStop=/bin/systemctl kill celerybeat.service
+
+[Install]
+WantedBy=multi-user.target

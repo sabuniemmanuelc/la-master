@@ -1,0 +1,22 @@
+FROM python:3.11
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    POETRY_VERSION=1.4.1
+
+WORKDIR /app
+
+RUN apt-get update
+
+RUN pip install "poetry==$POETRY_VERSION"
+
+COPY ../../poetry.lock pyproject.toml ./
+
+RUN poetry config virtualenvs.create false && \
+    poetry install
+
+COPY ../.. .
+
+RUN chmod +x deploy/docker/entrypoint.sh
+
+CMD ["deploy/docker/entrypoint.sh"]

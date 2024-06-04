@@ -1,0 +1,64 @@
+version: "3.8"
+name: "la-dev"
+
+services:
+  la_django:
+    build:
+      context: ../../
+      dockerfile: deploy/docker/Dockerfile-dev
+    container_name: la_django
+    env_file:
+      - .env
+    volumes:
+      - ../../:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      la_pgdb:
+        condition: service_healthy
+    networks:
+      - backend
+
+  la_pgdb:
+    image: postgres:latest
+    container_name: la_pgdb
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - la_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - backend
+
+  la_redis:
+    image: redis:latest
+    container_name: la_redis
+    expose:
+      - "6379"
+    volumes:
+      - la_redis_data:/data
+    networks:
+      - backend
+
+volumes:
+  la_pgdata:
+  la_redis_data:
+
+networks:
+  backend:
+    name: backend
+    driver: bridge

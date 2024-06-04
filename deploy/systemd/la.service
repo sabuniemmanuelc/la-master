@@ -1,0 +1,13 @@
+[Unit]
+Description=gunicorn daemon
+After=network.target
+
+[Service]
+User=pollycode
+Group=www-data
+WorkingDirectory=/opt/la
+ExecStartPre=chmod +x /opt/la/deploy/bin/app.sh
+ExecStart=/opt/la/deploy/bin/app.sh
+
+[Install]
+WantedBy=multi-user.target

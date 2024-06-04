@@ -1,0 +1,161 @@
+upstream la {
+  server unix:/opt/la/run/la.sock fail_timeout=0;
+}
+
+server {
+  server_name legaldata.us;
+
+  access_log /opt/la/logs/nginx-access.log;
+  error_log /opt/la/logs/nginx-error.log;
+
+  listen [::]:443 ssl ipv6only=on; # managed by Certbot
+  listen 443 ssl; # managed by Certbot
+  ssl_certificate /etc/letsencrypt/live/legal-data.tech/fullchain.pem; # managed by Certbot
+  ssl_certificate_key /etc/letsencrypt/live/legal-data.tech/privkey.pem; # managed by Certbot
+  include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+  ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+  root /opt/frontend/legal-advice.frontend-next/public;
+  client_max_body_size 100m;
+  index index.html;
+
+  location /back_static {
+    autoindex off;
+    alias /opt/frontend/static;
+  }
+
+  location /media/avatars {
+    autoindex off;
+    alias /opt/la/media/avatars;
+  }
+
+  location /media/files {
+    autoindex off;
+    alias /opt/la/media/files;
+  }
+
+  location / {
+    proxy_pass http://localhost:5001;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Port $server_port;
+    auth_basic "Restricted for LegalData only.";
+    auth_basic_user_file /etc/nginx/.htpasswd;
+  }
+
+  # temporary location, before connecting through the main backend
+  location ~ ^/api/search {
+    proxy_pass http://localhost:5002;
+  }
+
+  # nextjs auth routes
+  location ~ ^/api/auth {
+    proxy_pass http://localhost:5001;
+  }
+
+  location ~ ^/api/ws {
+    proxy_pass http://localhost:5002;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Port $server_port;
+    add_header 'Access-Control-Allow-Origin' 'http://localhost:3000' always;
+    add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+    add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range' always;
+    add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range' always;
+  }
+
+  location ~ ^/(admin|api|swagger|redoc) {
+    proxy_pass_request_headers on;
+    proxy_set_header        X-Real-IP $remote_addr;
+    proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header        Host $http_host;
+    proxy_redirect          off;
+    proxy_pass              http://la;
+    proxy_set_header        X-Forwarded-Proto $scheme;
+  }
+
+  location ~ ^/(la-light|docs) {
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Host $http_host;
+    proxy_redirect off;
+
+    if (!-f $request_filename) {
+      proxy_pass http://0.0.0.0:5500;
+      break;
+    }
+  }
+}
+
+server {
+  if ($host = legaldata.us) {
+    return 301 https://$host$request_uri;
+  } # managed by Certbot
+
+  listen 80 default_server;
+  listen [::]:80 default_server;
+
+  server_name legaldata.us;
+  return 404; # managed by Certbot
+}
+
+server {
+  if ($host = legal-data.tech) {
+    return 301 https://$host$request_uri;
+  } # managed by Certbot
+
+  server_name test.legal-data.tech; # managed by Certbot
+  return 404; # managed by Certbot
+
+  listen [::]:443 ssl; # managed by Certbot
+  listen 443 ssl; # managed by Certbot
+  ssl_certificate /etc/letsencrypt/live/legal-data.tech/fullchain.pem; # managed by Certbot
+  ssl_certificate_key /etc/letsencrypt/live/legal-data.tech/privkey.pem; # managed by Certbot
+  include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+  ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+}
+
+
+server {
+  if ($host = legal-data.tech) {
+    return 301 https://$host$request_uri;
+  } # managed by Certbot
+    server_name ai.legal-data.tech; # managed by Certbot
+  return 404; # managed by Certbot
+
+
+    listen [::]:443 ssl; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/ai.legal-data.tech-0001/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/ai.legal-data.tech-0001/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+
+}
+
+server {
+    if ($host = ai.legal-data.tech) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+
+  listen 80 ;
+  listen [::]:80 ;
+    server_name ai.legal-data.tech;
+    return 404; # managed by Certbot
+
+
+}
